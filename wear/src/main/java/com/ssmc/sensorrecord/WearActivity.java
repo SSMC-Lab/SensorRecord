@@ -6,7 +6,6 @@ import android.content.ServiceConnection;
 import android.hardware.Sensor;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v7.app.AppCompatActivity;
 import android.support.wearable.activity.WearableActivity;
 import android.view.View;
 import android.widget.Button;
@@ -22,8 +21,10 @@ public class WearActivity extends WearableActivity {
 
     private Button btRecordSensor;
 
-    private boolean isRunning = false;
+    private boolean isRecordSensor = false;
 
+    //配置项
+    //需要监听的传感器数据
     private List<Integer> mListSensorNeedRecord = new ArrayList<>(Arrays.asList(
             Sensor.TYPE_ACCELEROMETER,
             Sensor.TYPE_GRAVITY,
@@ -57,35 +58,41 @@ public class WearActivity extends WearableActivity {
         btRecordSensor.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!isRunning) {
+                String btText = btRecordSensor.getText().toString();
+                if (btText.equals(getString(R.string.sensor_record_status_not_running))) {
+                    btRecordSensor.setText(R.string.sensor_record_status_running);
                     startRecord();
+                } else if(btText.equals(getString(R.string.sensor_record_status_running))){
+                    btRecordSensor.setText(R.string.sensor_record_status_not_running);
+                    stopRecord();
                 }
             }
         });
     }
 
-
     private void startRecord() {
         Intent intent = new Intent(WearActivity.this, WearSensorRecordService.class);
         bindService(intent, mSensorRecordServiceConnection, BIND_AUTO_CREATE);
-        btRecordSensor.setText(R.string.sensor_record_status_running);
-        isRunning = true;
+        isRecordSensor = true;
     }
 
     private void stopRecord() {
-        isRunning = false;
+        isRecordSensor = false;
         mSensorRecordBinder.stop();
         unbindService(mSensorRecordServiceConnection);
-        btRecordSensor.setText(R.string.sensor_record_status_not_running);
         Toast.makeText(WearActivity.this, R.string.sensor_record_tip_stop, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        if (isRunning) {
+        if (isRecordSensor) {
             stopRecord();
         }
+    }
+
+    private boolean isSameString(String s1,String s2){
+        return s1.equals(s2);
     }
 }
 

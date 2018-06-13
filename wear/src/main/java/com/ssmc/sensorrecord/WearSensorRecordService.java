@@ -21,6 +21,10 @@ import java.util.Set;
 
 /**
  * 读取传感器数据并异步存储到本地
+ *
+ * 通过{@link MySensorEventListener}来监听传感器数据
+ *
+ * 使用{@link SensorRecordBinder#start(Set)}来设置需要监听的数据
  */
 public class WearSensorRecordService extends Service {
 
@@ -28,7 +32,7 @@ public class WearSensorRecordService extends Service {
     private MobileTransfer mMobileTransfer;
     private SensorEventListener mSensorEventListener = new MySensorEventListener();
 
-    private float timeBeginMillis;
+    private long timeBeginMillis;
 
     @Override
     public void onCreate() {
@@ -53,7 +57,7 @@ public class WearSensorRecordService extends Service {
         @Override
         public void onSensorChanged(SensorEvent event) {
             long currentTime = System.currentTimeMillis();
-            float timeToBeginSecond = (currentTime - timeBeginMillis) / 1000.f;
+            float timeToBeginSecond = (currentTime - timeBeginMillis) / 1000.000f;
             SensorRecord sensorRecord = new SensorRecord(event,currentTime,timeToBeginSecond);
             mMobileTransfer.sendSensorData(sensorRecord);
         }

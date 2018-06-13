@@ -1,4 +1,4 @@
-package com.ssmc.sensorrecord;
+package com.ssmc.sensorrecord.io;
 
 import android.os.Environment;
 
@@ -21,7 +21,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * 记录传感器数据，并统合到一起
+ * 记录传感器数据，将不同的传感器写入到不同的文件里{@link SensorDataWriter#mSensorTypeMapToOutput}
+ * 并将不同的统合到依据相同的时间写入到统一的文件{@link SensorDataWriter#FILE_NAME_SAME_TIME}
+ *
+ * 功能实现采用了将{@link SensorRecord#getStringType()}作为单独的文件名，构建了文件名/传感器类型和
+ * 输出流的映射关系{@link SensorDataWriter#mSensorTypeMapToOutput}
+ *
+ * 在线程任务中通过{@link StorageTask}线程来依据不同的输入流写入到不同的文件，{@link StorageTask}
+ * 实现了写入的相关操作
  */
 public class SensorDataWriter implements ISensorStorage {
 
@@ -36,7 +43,7 @@ public class SensorDataWriter implements ISensorStorage {
 
     private Executor mExecutor = Executors.newSingleThreadExecutor();
     private BlockingQueue<SensorRecord> mSensorRecordQueue = new LinkedBlockingQueue<>();
-    private Map<String, BufferedWriter> mSensorTypeMapToOutput = new HashMap<>();
+    private Map<String, BufferedWriter> mSensorTypeMapToOutput = new HashMap<>();//传感器类型和输出流的映射
     private boolean isRunning = false;
 
     class StorageTask implements Runnable {

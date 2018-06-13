@@ -5,7 +5,7 @@ import android.hardware.Sensor;
 import android.widget.CheckBox;
 
 /**
- * 建立 Checkbox 与 Sensor 的映射关系
+ * 建立 Checkbox 与 Sensor 的关系
  */
 public class SensorCheckBox {
     CheckBox checkBox;

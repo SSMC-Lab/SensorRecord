@@ -8,25 +8,24 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Binder;
 import android.os.IBinder;
-import android.util.Log;
 
 import com.ssmc.sensordesc.SensorRecord;
+import com.ssmc.sensorrecord.io.SensorDataWriter;
 
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * 读取传感器数据并异步存储到本地
+ *
+ * 通过{@link MySensorEventListener}来监听传感器数据
+ *
+ * 使用{@link SensorRecordBinder#start(List)}来设置需要监听的数据
  */
 public class MobileSensorRecordService extends Service {
 
-    private static String TAG = "MobileSensorRecordService";
+    //private static String TAG = "MobileSensorRecordService";
 
     private SensorManager mSensorManager;
     private SensorEventListener mSensorEventListener;

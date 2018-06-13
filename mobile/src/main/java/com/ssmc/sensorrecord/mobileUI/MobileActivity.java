@@ -13,34 +13,29 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.Toast;
 
 import com.ssmc.sensorrecord.MobileSensorRecordService;
-import com.ssmc.sensorrecord.SensorDataWriter;
+import com.ssmc.sensorrecord.io.SensorDataWriter;
 import com.ssmc.sensorrecord.WearTransfer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import permissions.dispatcher.NeedsPermission;
 import permissions.dispatcher.RuntimePermissions;
 
 /**
  * 这个Activity逻辑过于复杂，需要分模块解耦合
- * 建议分成本地Sensor、Wear
+ * 建议分成本地Sensor、WearTransfer部分
  */
 @RuntimePermissions
 public class MobileActivity extends AppCompatActivity {
 
     private static final String TAG = "MobileActivity";
 
-    //在这里设置想提供给用户的监听接口
+    //配置项
     //保存 CheckBox 和 Sensor 的映射
     private List<SensorCheckBox> mCheckboxToSensorMapping = new ArrayList<>(Arrays.asList(
             new SensorCheckBox(Sensor.STRING_TYPE_ACCELEROMETER, Sensor.TYPE_ACCELEROMETER, this),
@@ -50,9 +45,12 @@ public class MobileActivity extends AppCompatActivity {
             new SensorCheckBox(Sensor.STRING_TYPE_ROTATION_VECTOR, Sensor.TYPE_ROTATION_VECTOR, this),
             new SensorCheckBox(Sensor.STRING_TYPE_MAGNETIC_FIELD, Sensor.TYPE_MAGNETIC_FIELD, this),
             new SensorCheckBox(Sensor.STRING_TYPE_ORIENTATION, Sensor.TYPE_ORIENTATION, this)));
+    //设置手表的传输服务
+    private WearTransfer mWearTransfer =
+            new WearTransfer(MobileActivity.this,
+                    new SensorDataWriter("wear"));
 
-    private Button record;
-    private WearTransfer mWearTransfer;
+    private Button btRecord;
     private MobileSensorRecordService.SensorRecordBinder mService;
     private List<Integer> sensorNeedRecord;
 
@@ -82,7 +80,6 @@ public class MobileActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        mWearTransfer = new WearTransfer(MobileActivity.this, new SensorDataWriter("wear"));
         mWearTransfer.start();
     }
 
@@ -108,17 +105,17 @@ public class MobileActivity extends AppCompatActivity {
             sensorCheckBox.loadCheckBox();//加载文字到checkbox上
             layout.addView(sensorCheckBox.checkBox);
         }
-        record = new Button(this);
-        record.setText("确定");
-        record.setWidth(LinearLayout.LayoutParams.MATCH_PARENT);
-        record.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
-        record.setOnClickListener(new View.OnClickListener() {
+        btRecord = new Button(this);
+        btRecord.setText("确定");
+        btRecord.setWidth(LinearLayout.LayoutParams.MATCH_PARENT);
+        btRecord.setHeight(LinearLayout.LayoutParams.WRAP_CONTENT);
+        btRecord.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 MobileActivityPermissionsDispatcher.recordSensorWithPermissionCheck(MobileActivity.this);
             }
         });
-        layout.addView(record);
+        layout.addView(btRecord);
         setContentView(layout);
     }
 
@@ -129,31 +126,46 @@ public class MobileActivity extends AppCompatActivity {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.BODY_SENSORS})
     void recordSensor() {
-        if (record.getText().equals("确定")) {
-            StringBuilder stringBuilder = new StringBuilder();
+        if (btRecord.getText().equals("确定")) {
+            StringBuilder dialogMessage = new StringBuilder();
             final List<Integer> sensorNeedRecord = new LinkedList<>();
-            stringBuilder.append("已经选中:\n");
+            dialogMessage.append("已经选中:\n");
+            //从SensorCheckBox里找出选中的要监听的传感器发给Service监听
+            boolean isAtLeastCheckOne = false;
             for (SensorCheckBox sensorCheckBox : mCheckboxToSensorMapping) {
                 if (sensorCheckBox.checkBox.isChecked()) {
-                    stringBuilder.append(sensorCheckBox.checkBox.getText().toString());
-                    stringBuilder.append("\n");
+                    dialogMessage.append(sensorCheckBox.checkBox.getText().toString());
+                    dialogMessage.append("\n");
                     sensorNeedRecord.add(sensorCheckBox.sensor);
+                    isAtLeastCheckOne = true;
                 }
             }
-            new AlertDialog.Builder(MobileActivity.this)
-                    .setMessage(stringBuilder.toString())
-                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                        startRecord(sensorNeedRecord);
-                        }
-                    })
-                    .create()
-                    .show();
-            record.setText("正在写入");
-        } else if (record.getText().equals("正在写入")) {
+            AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(MobileActivity.this);
+            if (isAtLeastCheckOne) {
+                alertDialogBuilder
+                        .setMessage(dialogMessage.toString())
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                startRecord(sensorNeedRecord);
+                            }
+                        });
+                btRecord.setText("正在写入");
+            } else {
+                //如果所有CheckBox都没有被选中
+                alertDialogBuilder
+                        .setMessage("您没有选中任何要监听的传感器")
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                            }
+                        });
+            }
+            alertDialogBuilder.create().show();
+
+        } else if (btRecord.getText().equals("正在写入")) {
             stopRecord();
-            record.setText("确定");
+            btRecord.setText("确定");
         }
     }
 
